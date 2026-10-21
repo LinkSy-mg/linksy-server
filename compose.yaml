@@ -1,7 +1,11 @@
-# linksy-server for Dokploy, behind a tunnel: no ports published. It joins
-# dokploy-network as `linksy-relay`, listening on 3340 (plain HTTP), and tells Dokploy's
-# Traefik to serve it as linksy-relay.diary.mg (a tunnel route for *.diary.mg to Traefik
-# is all it needs). Standalone with its own certificate and ports: compose.public.yaml.
+# linksy-server behind a Cloudflare Tunnel only: no published ports, no UDP. For a
+# Dokploy "Compose" app from this repository (compose path compose.yaml); the image is
+# built on the host, so no registry login.
+#
+# Tunnel public hostname: linksy-relay.diary.mg → HTTP → http://linksy-relay:3340
+# (cloudflared must share a network with this service: dokploy-network here). Use a
+# name one level under the zone: Cloudflare's free certificate doesn't cover two.
+# Standalone with its own certificate and ports instead: compose.public.yaml.
 
 services:
   relay:
@@ -10,32 +14,24 @@ services:
       args:
         CONFIG: relay.tunnel.toml
     image: linksy-server:1.4.0-tunnel
+    container_name: linksy-relay
     restart: unless-stopped
     expose:
       - "3340"   # the relay (HTTP / WebSocket); the tunnel adds HTTPS
     networks:
       dokploy-network:
         aliases: [linksy-relay]
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=dokploy-network
-      - traefik.http.services.linksy-relay.loadbalancer.server.port=3340
-      # The tunnel reaches Traefik over HTTPS or HTTP: route both. Cloudflare holds the
-      # public certificate.
-      - traefik.http.routers.linksy-relay.rule=Host(`linksy-relay.diary.mg`)
-      - traefik.http.routers.linksy-relay.entrypoints=websecure
-      - traefik.http.routers.linksy-relay.tls=true
-      - traefik.http.routers.linksy-relay.service=linksy-relay
-      - traefik.http.routers.linksy-relay-http.rule=Host(`linksy-relay.diary.mg`)
-      - traefik.http.routers.linksy-relay-http.entrypoints=web
-      - traefik.http.routers.linksy-relay-http.service=linksy-relay
     # Hardened: read-only, not root, no capabilities at all, no privilege gain.
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    # good neighbour on a shared host: hard caps, lowest priority under contention,
+    # bounded logs
     pids_limit: 256
     mem_limit: 256m
+    memswap_limit: 256m
     cpus: 1.0
+    cpu_shares: 256
     ulimits:
       nofile: { soft: 65536, hard: 65536 }
     logging:
