@@ -1,0 +1,25 @@
+# Linksy's relay behind a tunnel (Cloudflare Tunnel, Dokploy's Traefik…): plain HTTP on
+# port 3340 inside the network; the tunnel serves it as https://<your domain> and holds
+# the certificate. Nothing here depends on the domain.
+#
+# Devices use it to meet; their data goes directly between them, end-to-end encrypted.
+# When two networks block a direct connection, it passes only a trickle (clipboard,
+# ring, battery…): files, screens, cameras and microphones need a direct path.
+
+enable_relay = true
+http_bind_addr = "[::]:3340"
+# Address discovery is QUIC over UDP, which a tunnel can't carry (see README).
+enable_quic_addr_discovery = false
+enable_metrics = true
+metrics_bind_addr = "[::]:9090"
+
+[limits]
+# New connections per second, and in a burst, for the whole server.
+accept_conn_limit = 50.0
+accept_conn_burst = 200
+
+[limits.client.rx]
+# What one device may push through the relay: a trickle, by design.
+# 16 KiB/s, bursts of 256 KiB (one clipboard).
+bytes_per_second = 16384
+max_burst_bytes = 262144

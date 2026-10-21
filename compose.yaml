@@ -1,32 +1,25 @@
-# linksy-server: cp relay.example.toml relay.toml, set hostname and contact, then
-# docker compose up -d --build
-# Needs a DNS name pointing at this machine and ports 80 and 443/tcp and 7842/udp open.
-# The certificate comes from Let's Encrypt on first start.
-
-name: linksy
+# linksy-server for Dokploy, behind a tunnel: no ports published. It joins
+# dokploy-network as `linksy-relay`, listening on 3340 (plain HTTP). In Dokploy, add a
+# domain for this service on port 3340 (or point the tunnel at http://linksy-relay:3340).
+# Standalone with its own certificate and ports instead: compose.public.yaml.
 
 services:
   relay:
-    build: .
-    image: linksy-server:1.4.0
+    build:
+      context: .
+      args:
+        CONFIG: relay.tunnel.toml
+    image: linksy-server:1.4.0-tunnel
     restart: unless-stopped
-    ports:
-      - "80:80/tcp"      # Let's Encrypt challenges and the captive-portal probe
-      - "443:443/tcp"    # the relay (HTTPS / WebSocket)
-      - "7842:7842/udp"  # QUIC address discovery: "what's my public address?"
-      - "127.0.0.1:9090:9090/tcp"  # Prometheus metrics, this machine only
-    configs:
-      - source: relay
-        target: /etc/linksy-relay/relay.toml
-    volumes:
-      - certs:/var/lib/linksy-relay/certs
-    # Hardened: read-only, not root, no capabilities at all, no privilege gain. Ports 80
-    # and 443 open to the unprivileged user through this container's own network sysctl.
+    expose:
+      - "3340"   # the relay (HTTP / WebSocket); the tunnel adds HTTPS
+    networks:
+      dokploy-network:
+        aliases: [linksy-relay]
+    # Hardened: read-only, not root, no capabilities at all, no privilege gain.
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    sysctls:
-      net.ipv4.ip_unprivileged_port_start: 0
     pids_limit: 256
     mem_limit: 256m
     cpus: 1.0
@@ -36,9 +29,6 @@ services:
       driver: local
       options: { max-size: 5m, max-file: "2" }
 
-configs:
-  relay:
-    file: ./relay.toml
-
-volumes:
-  certs:
+networks:
+  dokploy-network:
+    external: true

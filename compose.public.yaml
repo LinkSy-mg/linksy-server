@@ -1,0 +1,40 @@
+# linksy-server: cp relay.example.toml relay.toml, set hostname and contact, then
+# docker compose up -d --build
+# Needs a DNS name pointing at this machine and ports 80 and 443/tcp and 7842/udp open.
+# The certificate comes from Let's Encrypt on first start.
+
+name: linksy
+
+services:
+  relay:
+    build:
+      context: .
+      args:
+        CONFIG: relay.toml
+    image: linksy-server:1.4.0-public
+    restart: unless-stopped
+    ports:
+      - "80:80/tcp"      # Let's Encrypt challenges and the captive-portal probe
+      - "443:443/tcp"    # the relay (HTTPS / WebSocket)
+      - "7842:7842/udp"  # QUIC address discovery: "what's my public address?"
+      - "127.0.0.1:9090:9090/tcp"  # Prometheus metrics, this machine only
+    volumes:
+      - certs:/var/lib/linksy-relay/certs
+    # Hardened: read-only, not root, no capabilities at all, no privilege gain. Ports 80
+    # and 443 open to the unprivileged user through this container's own network sysctl.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
+    pids_limit: 256
+    mem_limit: 256m
+    cpus: 1.0
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+    logging:
+      driver: local
+      options: { max-size: 5m, max-file: "2" }
+
+volumes:
+  certs:
