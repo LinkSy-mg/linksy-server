@@ -1,0 +1,10 @@
+# Local test (compose.dev.yaml): plain HTTP on port 3340, no certificate.
+enable_relay = true
+http_bind_addr = "[::]:3340"
+enable_quic_addr_discovery = false
+enable_metrics = true
+metrics_bind_addr = "[::]:9090"
+
+[limits.client.rx]
+bytes_per_second = 16384
+max_burst_bytes = 262144
