@@ -3,6 +3,10 @@
 # relays only a trickle (see relay.toml) and stores nothing but its TLS certificate.
 
 ARG IROH_RELAY_VERSION=1.4.0
+# Which configuration goes in the image: relay.tunnel.toml (behind a tunnel, the default)
+# or relay.toml (standalone, from relay.example.toml). Built in, not mounted: a mounted
+# file the relay can't read (SELinux, say) makes it start silently with its defaults.
+ARG CONFIG=relay.tunnel.toml
 
 FROM rust:1.91-alpine AS build
 ARG IROH_RELAY_VERSION
@@ -13,6 +17,8 @@ RUN cargo install iroh-relay --version "=${IROH_RELAY_VERSION}" --features serve
 RUN mkdir -p /out/state/certs && chown -R 65534:65534 /out/state
 
 FROM scratch
+ARG CONFIG
+COPY ${CONFIG} /etc/linksy-relay/relay.toml
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /out/bin/iroh-relay /iroh-relay
 COPY --from=build --chown=65534:65534 /out/state /var/lib/linksy-relay
