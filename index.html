@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Linksy Relay</title>
+<style>
+  :root { --bg: #f5f7fc; --card: #fff; --fg: #0d1430; --soft: #56607e; --line: #dde3f0; --signal: #2563ff; --cyan: #0fa5c4; --ok: #12a150; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #070b1a; --card: #0f1630; --fg: #eef2ff; --soft: #9aa6c8; --line: #222c4d; --signal: #4d82ff; --cyan: #22c3e6; --ok: #3ddc84; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; padding: 24px 16px; }
+  main { width: 100%; max-width: 34rem; display: grid; gap: 1.4rem; }
+  header { display: flex; align-items: center; gap: .75rem; }
+  header svg { flex: none; }
+  h1 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -.01em; }
+  .status { display: inline-flex; align-items: center; gap: .5rem; font-weight: 600; color: var(--ok); }
+  .status i { width: .6rem; height: .6rem; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); }
+  p { margin: 0; color: var(--soft); }
+  ul { margin: 0; padding: 0; list-style: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  li { padding: .85rem 1rem; display: grid; gap: .15rem; }
+  li + li { border-top: 1px solid var(--line); }
+  li b { font-weight: 650; }
+  li span { color: var(--soft); font-size: .93rem; }
+  footer { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; font-size: .93rem; }
+  a { color: var(--signal); text-decoration: none; font-weight: 600; }
+  a:hover, a:focus-visible { text-decoration: underline; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="44" height="44" fill="none" aria-hidden="true">
+      <circle cx="25" cy="75" r="12" fill="#2563FF"/>
+      <path d="M25 47 A28 28 0 0 1 53 75" stroke="#2563FF" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M78 42 A20 20 0 0 1 58 22" stroke="#22C3E6" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="78" cy="22" r="8" fill="#22C3E6"/>
+    </svg>
+    <div>
+      <h1>Linksy Relay</h1>
+      <span class="status"><i></i>Online</span>
+    </div>
+  </header>
+  <p>This server helps your Linksy devices find each other when they're on different networks. There's nothing to do here: the Linksy apps use it on their own.</p>
+  <ul>
+    <li><b>It can't read anything</b><span>Everything between your devices is encrypted end to end, with keys only they hold.</span></li>
+    <li><b>It doesn't carry your files</b><span>Files, screens, cameras and microphones go straight between your devices. It passes only small messages, like the clipboard or Ring.</span></li>
+    <li><b>It keeps nothing</b><span>No accounts, no logs of who connects, nothing stored.</span></li>
+  </ul>
+  <footer>
+    <a href="https://linksy.diary.mg">linksy.diary.mg</a>
+    <a href="https://linksy.diary.mg/#privacy">Privacy</a>
+    <span style="color:var(--soft)">Built on <a href="https://iroh.computer/">iroh</a></span>
+  </footer>
+</main>
+</body>
+</html>

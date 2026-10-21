@@ -10,9 +10,17 @@ ARG CONFIG=relay.tunnel.toml
 
 FROM rust:1.91-alpine AS build
 ARG IROH_RELAY_VERSION
-RUN apk add --no-cache musl-dev ca-certificates
-# Static build of the upstream relay at an exact version, from crates.io's lockfile.
-RUN cargo install iroh-relay --version "=${IROH_RELAY_VERSION}" --features server --locked --root /out \
+RUN apk add --no-cache musl-dev ca-certificates perl
+# The upstream relay at an exact version, from crates.io with its lockfile. One change:
+# its front page (a constant in server.rs) becomes Linksy's index.html. The build stops
+# if that constant ever moves, rather than shipping iroh's page by mistake.
+COPY index.html /linksy/index.html
+RUN wget -qO- "https://crates.io/api/v1/crates/iroh-relay/${IROH_RELAY_VERSION}/download" | tar xz -C /tmp \
+ && cd "/tmp/iroh-relay-${IROH_RELAY_VERSION}" \
+ && grep -q 'const INDEX: &\[u8\] = br#"' src/server.rs \
+ && perl -0pi -e 's/const INDEX: &\[u8\] = br#".*?"#;/const INDEX: &[u8] = include_bytes!("\/linksy\/index.html");/s' src/server.rs \
+ && grep -q 'include_bytes!("/linksy/index.html")' src/server.rs \
+ && cargo install --path . --features server --locked --root /out \
  && strip /out/bin/iroh-relay
 RUN mkdir -p /out/state/certs && chown -R 65534:65534 /out/state
 
