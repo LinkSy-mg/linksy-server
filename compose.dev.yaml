@@ -1,0 +1,32 @@
+# Local test: plain HTTP on localhost:3340, no certificate, no address discovery.
+# docker compose -f compose.dev.yaml up --build
+
+name: linksy-dev
+
+services:
+  relay:
+    build: .
+    image: linksy-server:1.4.0
+    command: ["--dev"]
+    ports:
+      - "127.0.0.1:3340:3340/tcp"
+      - "127.0.0.1:9090:9090/tcp"
+    configs:
+      - source: relay
+        target: /etc/linksy-relay/relay.toml
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+configs:
+  relay:
+    content: |
+      enable_relay = true
+      http_bind_addr = "[::]:3340"
+      enable_quic_addr_discovery = false
+      enable_metrics = true
+      metrics_bind_addr = "[::]:9090"
+
+      [limits.client.rx]
+      bytes_per_second = 16384
+      max_burst_bytes = 262144

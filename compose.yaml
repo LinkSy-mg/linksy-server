@@ -1,0 +1,71 @@
+# linksy-server: docker compose up -d
+# Needs a DNS name pointing at this machine (LINKSY_DOMAIN in .env) and ports 80 and
+# 443/tcp and 7842/udp open. The certificate comes from Let's Encrypt on first start.
+
+name: linksy
+
+services:
+  relay:
+    build: .
+    image: linksy-server:1.4.0
+    restart: unless-stopped
+    ports:
+      - "80:80/tcp"      # Let's Encrypt challenges and the captive-portal probe
+      - "443:443/tcp"    # the relay (HTTPS / WebSocket)
+      - "7842:7842/udp"  # QUIC address discovery: "what's my public address?"
+      - "127.0.0.1:9090:9090/tcp"  # Prometheus metrics, this machine only
+    configs:
+      - source: relay
+        target: /etc/linksy-relay/relay.toml
+    volumes:
+      - certs:/var/lib/linksy-relay/certs
+    # Hardened: read-only, not root, no capabilities at all, no privilege gain. Ports 80
+    # and 443 open to the unprivileged user through this container's own network sysctl.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
+    pids_limit: 256
+    mem_limit: 256m
+    cpus: 1.0
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+    logging:
+      driver: local
+      options: { max-size: 5m, max-file: "2" }
+
+configs:
+  relay:
+    content: |
+      # Linksy's relay. Devices use it to meet and to learn their public address; their
+      # data goes directly between them, end-to-end encrypted. When two networks block a
+      # direct connection, the relay passes only a trickle (clipboard, ring, battery…):
+      # files, screens and cameras need a direct path.
+      enable_relay = true
+      http_bind_addr = "[::]:80"
+      enable_quic_addr_discovery = true
+      enable_metrics = true
+      metrics_bind_addr = "[::]:9090"
+
+      [tls]
+      https_bind_addr = "[::]:443"
+      quic_bind_addr = "[::]:7842"
+      hostname = "${LINKSY_DOMAIN:?set LINKSY_DOMAIN in .env}"
+      cert_mode = "LetsEncrypt"
+      cert_dir = "/var/lib/linksy-relay/certs"
+      contact = "${LINKSY_EMAIL:?set LINKSY_EMAIL in .env}"
+      prod_tls = true
+
+      [limits]
+      # New connections per second (and burst) for the whole server.
+      accept_conn_limit = ${LINKSY_ACCEPT_PER_SECOND:-50}.0
+      accept_conn_burst = ${LINKSY_ACCEPT_BURST:-200}
+
+      [limits.client.rx]
+      # What one device may push through the relay: a trickle, by design.
+      bytes_per_second = ${LINKSY_TRICKLE_BYTES_PER_SECOND:-16384}
+      max_burst_bytes = ${LINKSY_TRICKLE_BURST_BYTES:-262144}
+
+volumes:
+  certs:
