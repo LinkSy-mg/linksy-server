@@ -36,20 +36,47 @@ It **logs warnings only** (`RUST_LOG=warn`): no per-connection lines, so no IP a
 on disk. It **stores nothing** but its TLS certificate. Metrics are totals only and
 listen on `127.0.0.1` of the host.
 
-## Deploy
+## Deploy with Dokploy, behind a tunnel (`compose.yaml`)
 
-You need a small Linux server with a public IP (1 vCPU, 512 MB is plenty), Docker with
-Compose v2.23 or newer, and a DNS name for it.
+Nothing to configure, and no domain in this repository: the tunnel holds the domain
+and the certificate, and the relay speaks plain HTTP inside `dokploy-network`.
 
-1. Point a DNS record (A, and AAAA if the server has IPv6) at the server, for example
-   `relay.linksy.diary.mg`.
-2. Open ports **80/tcp, 443/tcp and 7842/udp** in the firewall.
+1. Push this repository to your git host (private is fine).
+2. In Dokploy: **Create Service → Compose**, from the repository, compose path
+   `compose.yaml`. Deploy. It builds the image (a few minutes the first time) and joins
+   `dokploy-network` as **`linksy-relay`**, port **3340**. No port is published on the
+   host.
+3. Give it a domain, either way:
+   - Dokploy's **Domains** tab: service `relay`, port `3340`, path `/`. HTTPS is the
+     tunnel's job, so no certificate here.
+   - Or a Cloudflare Tunnel public hostname pointing at `http://linksy-relay:3340`
+     (when `cloudflared` runs on `dokploy-network`).
+   WebSockets must be allowed (Cloudflare allows them by default).
+4. Check it: `curl -s -o /dev/null -w '%{http_code}\n' https://<your domain>/ping` → `200`.
+
+Tell me the domain when Linksy 0.6 needs it: it's a setting in the apps, not here.
+
+**What a tunnel can't carry:** the relay's address discovery (QUIC over UDP port 7842),
+which helps two devices on different networks find a direct path. Behind a tunnel the
+relay still introduces devices and passes the trickle; direct connections across
+networks may succeed less often. If Linksy 0.6's measurements say it matters, the fix is
+to publish UDP 7842 on the server directly (outside the tunnel); `compose.public.yaml`
+shows how.
+
+Metrics (totals only) answer on `http://linksy-relay:9090/metrics` inside
+`dokploy-network`, for a Prometheus there; they're not routed anywhere else.
+
+## Deploy standalone, with its own certificate (`compose.public.yaml`)
+
+For a server with a public IP and no tunnel: you need Docker Compose and a DNS name.
+
+1. Point a DNS record (A, and AAAA if the server has IPv6) at the server.
+2. Open ports **80/tcp, 443/tcp and 7842/udp**.
 3. Configure and start:
 
    ```sh
-   git clone <this repository> linksy-server && cd linksy-server
    cp relay.example.toml relay.toml    # set hostname and contact
-   docker compose up -d --build
+   docker compose -f compose.public.yaml up -d --build
    ```
 
    The first start gets a Let's Encrypt certificate (port 80 must be reachable).
@@ -57,14 +84,17 @@ Compose v2.23 or newer, and a DNS name for it.
 4. Check it:
 
    ```sh
-   curl -s -o /dev/null -w '%{http_code}\n' https://relay.linksy.diary.mg/ping   # 200
+   curl -s -o /dev/null -w '%{http_code}\n' https://<your domain>/ping   # 200
    curl -s 127.0.0.1:9090/metrics | grep -E '^relayserver_(accepts|bytes_)'
-   docker compose logs -f relay                                                 # warnings only
    ```
 
-Upgrade: change `IROH_RELAY_VERSION` in the `Dockerfile` (and the image tag in
-`compose.yaml`), then `docker compose up -d --build`. Linksy apps and the relay must use
-compatible iroh versions; the apps' release notes say which.
+**Configuration is built into the image** (`CONFIG` build argument), not mounted: a
+mounted file the relay can't read (SELinux, for one) makes it start silently with its
+defaults. After editing a `.toml`, rebuild (`--build`).
+
+Upgrade: change `IROH_RELAY_VERSION` in the `Dockerfile` and the image tags in the
+compose files, then rebuild. Linksy apps and the relay must use compatible iroh
+versions; the apps' release notes say which.
 
 ## Hardening
 
@@ -73,12 +103,12 @@ but the binary and CA certificates), with a **read-only** filesystem, **every Li
 capability dropped**, `no-new-privileges`, and limits on memory (256 MB), CPU (1),
 processes (256) and log size. Ports 80 and 443 are opened to the unprivileged user
 through the container's own `ip_unprivileged_port_start` network sysctl, not by a
-capability. The only writable path is the certificate volume; the configuration is
-mounted read-only.
+capability (standalone only; behind a tunnel it listens on 3340). The only writable
+path is the certificate volume.
 
 ## Tuning
 
-In `relay.toml`, then `docker compose up -d`:
+In `relay.tunnel.toml` (or `relay.toml` standalone), then rebuild:
 
 | Setting | Default | Meaning |
 |---|---|---|
