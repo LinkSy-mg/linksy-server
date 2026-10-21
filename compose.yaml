@@ -1,7 +1,7 @@
 # linksy-server for Dokploy, behind a tunnel: no ports published. It joins
-# dokploy-network as `linksy-relay`, listening on 3340 (plain HTTP). In Dokploy, add a
-# domain for this service on port 3340 (or point the tunnel at http://linksy-relay:3340).
-# Standalone with its own certificate and ports instead: compose.public.yaml.
+# dokploy-network as `linksy-relay`, listening on 3340 (plain HTTP), and tells Dokploy's
+# Traefik to serve it as linksy-relay.diary.mg (a tunnel route for *.diary.mg to Traefik
+# is all it needs). Standalone with its own certificate and ports: compose.public.yaml.
 
 services:
   relay:
@@ -16,6 +16,19 @@ services:
     networks:
       dokploy-network:
         aliases: [linksy-relay]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.linksy-relay.loadbalancer.server.port=3340
+      # The tunnel reaches Traefik over HTTPS or HTTP: route both. Cloudflare holds the
+      # public certificate.
+      - traefik.http.routers.linksy-relay.rule=Host(`linksy-relay.diary.mg`)
+      - traefik.http.routers.linksy-relay.entrypoints=websecure
+      - traefik.http.routers.linksy-relay.tls=true
+      - traefik.http.routers.linksy-relay.service=linksy-relay
+      - traefik.http.routers.linksy-relay-http.rule=Host(`linksy-relay.diary.mg`)
+      - traefik.http.routers.linksy-relay-http.entrypoints=web
+      - traefik.http.routers.linksy-relay-http.service=linksy-relay
     # Hardened: read-only, not root, no capabilities at all, no privilege gain.
     read_only: true
     cap_drop: [ALL]
