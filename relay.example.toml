@@ -1,0 +1,34 @@
+# Linksy's relay. Copy to relay.toml and set `hostname` and `contact`.
+#
+# Devices use it to meet and to learn their public address; their data goes directly
+# between them, end-to-end encrypted. When two networks block a direct connection, the
+# relay passes only a trickle (clipboard, ring, battery…): files, screens, cameras and
+# microphones need a direct path.
+
+enable_relay = true
+http_bind_addr = "[::]:80"
+enable_quic_addr_discovery = true
+enable_metrics = true
+metrics_bind_addr = "[::]:9090"
+
+[tls]
+https_bind_addr = "[::]:443"
+quic_bind_addr = "[::]:7842"
+# This server's DNS name (an A/AAAA record pointing here).
+hostname = "relay.linksy.diary.mg"
+cert_mode = "LetsEncrypt"
+cert_dir = "/var/lib/linksy-relay/certs"
+# For Let's Encrypt's expiry notices.
+contact = "you@example.com"
+prod_tls = true
+
+[limits]
+# New connections per second, and in a burst, for the whole server.
+accept_conn_limit = 50.0
+accept_conn_burst = 200
+
+[limits.client.rx]
+# What one device may push through the relay: a trickle, by design.
+# 16 KiB/s, bursts of 256 KiB (one clipboard).
+bytes_per_second = 16384
+max_burst_bytes = 262144
