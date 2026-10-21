@@ -48,7 +48,7 @@ Compose v2.23 or newer, and a DNS name for it.
 
    ```sh
    git clone <this repository> linksy-server && cd linksy-server
-   cp .env.example .env    # set LINKSY_DOMAIN and LINKSY_EMAIL
+   cp relay.example.toml relay.toml    # set hostname and contact
    docker compose up -d --build
    ```
 
@@ -57,9 +57,9 @@ Compose v2.23 or newer, and a DNS name for it.
 4. Check it:
 
    ```sh
-   curl -sI https://relay.linksy.diary.mg/ping   # 200 OK
-   curl -s 127.0.0.1:9090/metrics | grep -E '^relay_(accepts|bytes_)'
-   docker compose logs -f relay                 # warnings only
+   curl -s -o /dev/null -w '%{http_code}\n' https://relay.linksy.diary.mg/ping   # 200
+   curl -s 127.0.0.1:9090/metrics | grep -E '^relayserver_(accepts|bytes_)'
+   docker compose logs -f relay                                                 # warnings only
    ```
 
 Upgrade: change `IROH_RELAY_VERSION` in the `Dockerfile` (and the image tag in
@@ -73,22 +73,24 @@ but the binary and CA certificates), with a **read-only** filesystem, **every Li
 capability dropped**, `no-new-privileges`, and limits on memory (256 MB), CPU (1),
 processes (256) and log size. Ports 80 and 443 are opened to the unprivileged user
 through the container's own `ip_unprivileged_port_start` network sysctl, not by a
-capability. The only writable path is the certificate volume.
+capability. The only writable path is the certificate volume; the configuration is
+mounted read-only.
 
 ## Tuning
 
-In `.env`:
+In `relay.toml`, then `docker compose up -d`:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `LINKSY_TRICKLE_BYTES_PER_SECOND` | 16384 | What one device may relay per second |
-| `LINKSY_TRICKLE_BURST_BYTES` | 262144 | What it may relay at once (one clipboard) |
-| `LINKSY_ACCEPT_PER_SECOND` | 50 | New connections per second, whole server |
-| `LINKSY_ACCEPT_BURST` | 200 | New connections in a burst |
+| `limits.client.rx.bytes_per_second` | 16384 | What one device may relay per second |
+| `limits.client.rx.max_burst_bytes` | 262144 | What it may relay at once (one clipboard) |
+| `limits.accept_conn_limit` | 50.0 | New connections per second, whole server |
+| `limits.accept_conn_burst` | 200 | New connections in a burst |
 
 Sizing, with the trickle: traffic is introductions, address answers and small messages,
 so one 5 EUR VPS (20 TB/month) has room for far more users than it will have. Watch
-`relay_bytes_recv` in the metrics.
+`relayserver_bytes_recv_total` and `relayserver_bytes_rx_ratelimited_total` (how much the
+trickle held back) in the metrics.
 
 ## Self-hosting
 
@@ -101,5 +103,5 @@ of the default `relay.linksy.diary.mg`.
 
 ```sh
 docker compose -f compose.dev.yaml up --build
-curl -sI localhost:3340/ping
+curl -s -o /dev/null -w '%{http_code}\n' localhost:3340/ping   # 200
 ```
