@@ -1,4 +1,4 @@
-# linksy-server
+# linksy-relay
 
 The relay that lets Linksy devices find each other away from home. It is
 [iroh's relay](https://github.com/n0-computer/iroh) at a pinned version, built as one

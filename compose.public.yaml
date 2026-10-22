@@ -1,4 +1,4 @@
-# linksy-server: cp relay.example.toml relay.toml, set hostname and contact, then
+# linksy-relay: cp relay.example.toml relay.toml, set hostname and contact, then
 # docker compose up -d --build
 # Needs a DNS name pointing at this machine and ports 80 and 443/tcp and 7842/udp open.
 # The certificate comes from Let's Encrypt on first start.
@@ -11,7 +11,7 @@ services:
       context: .
       args:
         CONFIG: relay.toml
-    image: linksy-server:1.4.0-public
+    image: linksy-relay:1.4.0-public
     restart: unless-stopped
     ports:
       - "80:80/tcp"      # Let's Encrypt challenges and the captive-portal probe

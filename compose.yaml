@@ -1,4 +1,4 @@
-# linksy-server behind a Cloudflare Tunnel only: no published ports, no UDP. For a
+# linksy-relay behind a Cloudflare Tunnel only: no published ports, no UDP. For a
 # Dokploy "Compose" app from this repository (compose path compose.yaml); the image is
 # built on the host, so no registry login.
 #
@@ -13,7 +13,7 @@ services:
       context: .
       args:
         CONFIG: relay.tunnel.toml
-    image: linksy-server:1.4.0-tunnel
+    image: linksy-relay:1.4.0-tunnel
     container_name: linksy-relay
     restart: unless-stopped
     expose:

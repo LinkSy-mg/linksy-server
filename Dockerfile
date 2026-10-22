@@ -1,4 +1,4 @@
-# linksy-server: iroh's relay, pinned, as one static binary on an empty image.
+# linksy-relay: iroh's relay, pinned, as one static binary on an empty image.
 # It introduces Linksy devices to each other and tells each its public address; it
 # relays only a trickle (see relay.toml) and stores nothing but its TLS certificate.
 

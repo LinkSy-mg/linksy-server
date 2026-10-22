@@ -9,7 +9,7 @@ services:
       context: .
       args:
         CONFIG: relay.dev.toml
-    image: linksy-server:1.4.0-dev
+    image: linksy-relay:1.4.0-dev
     command: ["--dev"]
     ports:
       - "127.0.0.1:3340:3340/tcp"
