@@ -1,0 +1,46 @@
+# linksy-relay behind a reverse proxy you already run on the host (nginx, Nginx Proxy
+# Manager, Caddy…): the proxy holds the domain and the certificate; the relay speaks plain
+# HTTP on 3340, published on the host's loopback only. No UDP (address discovery is off
+# in relay.tunnel.toml; see README).
+#
+#   docker compose -f compose.proxy.yaml up -d --build
+#   curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3340/ping   # 200
+#
+# Proxy to http://127.0.0.1:3340 with WebSockets allowed and long read/send timeouts
+# (README, "Behind your own reverse proxy"). If the proxy runs in Docker and can't reach
+# the host's loopback, join its network instead: replace `ports` with
+#   networks: [proxy]
+# and add at the bottom
+#   networks:
+#     proxy:
+#       external: true
+#       name: <the proxy's docker network>
+# then proxy to http://linksy-relay:3340.
+
+name: linksy
+
+services:
+  relay:
+    build:
+      context: .
+      args:
+        CONFIG: relay.tunnel.toml
+    image: linksy-relay:1.4.0-tunnel
+    container_name: linksy-relay
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3340:3340/tcp"   # the relay (HTTP / WebSocket); the proxy adds HTTPS
+      - "127.0.0.1:9090:9090/tcp"   # Prometheus metrics, this machine only
+    # Hardened: read-only, not root, no capabilities at all, no privilege gain.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 1.0
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+    logging:
+      driver: local
+      options: { max-size: 5m, max-file: "2" }

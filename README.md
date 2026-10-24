@@ -124,8 +124,50 @@ trickle held back) in the metrics.
 
 ## Self-hosting
 
-Anyone can run their own copy and point Linksy at it in Preferences (Linksy 0.6), instead
-of the default `relay.linksy.diary.mg`.
+Anyone can run their own copy and point Linksy at it instead of Linksy's own relay:
+
+- **Linux:** Preferences › Connection › Relay Server, or `linksy settings relay
+  https://relay.example.com` (`default` goes back). For a whole machine, set
+  `LINKSY_RELAY=https://relay.example.com` on the `linksyd` service
+  (`systemctl --user edit linksyd`).
+- **Android:** Settings › Connection › Relay server.
+
+Set the same relay on every device. Blank means Linksy's own relay again.
+
+## Behind your own reverse proxy (nginx)
+
+On a server that already serves HTTPS, run the tunnel flavour (plain HTTP on 3340,
+published on the host's loopback) and let the proxy hold the certificate:
+
+```sh
+docker compose -f compose.proxy.yaml up -d --build
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3340/ping   # 200
+```
+
+Then proxy WebSockets to it, with long timeouts (connections stay open):
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3340;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+    proxy_buffering off;
+}
+```
+
+Nginx Proxy Manager: a proxy host for the domain, scheme `http`, forward
+`127.0.0.1` port `3340`, **Websockets Support** on, and the `location /` body above
+(without the `proxy_pass` and the `Upgrade`/`Connection` lines, which the Websockets
+switch adds) in the host's **Advanced › Custom Nginx Configuration**. When Proxy
+Manager runs in Docker, `127.0.0.1` is its own container: see `compose.proxy.yaml` for
+joining its network and forwarding to `linksy-relay` instead.
+
+As behind a tunnel, QUIC address discovery (UDP 7842) isn't carried; see above.
 
 ## Try it on your computer
 
