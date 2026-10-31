@@ -1,12 +1,34 @@
-# linksy-relay
+<img width="1800" height="900" alt="Linksy Relay: finds your devices away from home, never reads them. A phone and a computer connected directly, introduced by the relay." src="docs/banner.png" />
 
-The relay that lets Linksy devices find each other away from home. It is
-[iroh's relay](https://github.com/n0-computer/iroh) at a pinned version, built as one
-static binary on an empty container image, with Linksy's settings.
+<div align="center">
 
-It doesn't carry your data. Linksy is also not using it yet: the desktop and phone
-apps will use it from Linksy 0.6 ("away from home"). This repository is the server side,
-ready to deploy.
+  <sub>The relay that lets <a href="https://github.com/LinkSy-mg/linksy-desktop">Linksy</a> devices find each other away from home: <a href="https://github.com/n0-computer/iroh">iroh's relay</a> at a pinned version, one static binary on an empty container image, with Linksy's settings. It doesn't carry your data.</sub>
+  <br/><br/>
+
+<p align="center">
+  <a href="https://github.com/n0-computer/iroh">
+    <img src="https://shieldcn.dev/badge/Relay-iroh-1e2a4a.svg?mode=dark&radius=999&font=geist&split=true&height=28&fontSize=13&labelColor=141821&labelTextColor=ffffff&color=1e2a4a&valueColor=ffffff" alt="iroh relay"></a>
+  <a href="#deploy-with-dokploy-behind-a-tunnel-composeyaml">
+    <img src="https://shieldcn.dev/badge/Runs%20in-Docker-1e2a4a.svg?mode=dark&radius=999&font=geist&split=true&height=28&fontSize=13&labelColor=141821&labelTextColor=ffffff&color=1e2a4a&valueColor=ffffff&logo=docker&logoColor=22c3e6" alt="Runs in Docker"></a>
+  <a href="#self-hosting">
+    <img src="https://shieldcn.dev/badge/Self--hostable-yes-1e2a4a.svg?mode=dark&radius=999&font=geist&split=true&height=28&fontSize=13&labelColor=141821&labelTextColor=ffffff&color=1e2a4a&valueColor=ffffff" alt="Self-hostable"></a>
+  <br/>
+  <a href="https://github.com/LinkSy-mg/linksy-server/stargazers">
+    <img src="https://shieldcn.dev/github/stars/LinkSy-mg/linksy-server.svg?mode=dark&radius=999&font=geist&split=true&height=28&fontSize=13&labelColor=141821&labelTextColor=ffffff&color=1e2a4a&valueColor=ffffff" alt="Stars"></a>
+  <a href="https://github.com/LinkSy-mg/linksy-server/issues">
+    <img src="https://shieldcn.dev/github/issues/LinkSy-mg/linksy-server.svg?mode=dark&radius=999&font=geist&split=true&height=28&fontSize=13&labelColor=141821&labelTextColor=ffffff&color=1e2a4a&valueColor=ffffff" alt="Issues"></a>
+  <a href="https://linksy.diary.mg">
+    <img src="https://shieldcn.dev/badge/Website-linksy.diary.mg-1e2a4a.svg?mode=dark&radius=999&font=geist&split=true&height=28&fontSize=13&labelColor=141821&labelTextColor=ffffff&color=1e2a4a&valueColor=ffffff" alt="Website"></a>
+</p>
+
+**[What it does](#what-it-does)** &nbsp;·&nbsp; **[Privacy](#what-it-sees-and-what-it-doesnt)** &nbsp;·&nbsp; **[Deploy](#deploy-with-dokploy-behind-a-tunnel-composeyaml)** &nbsp;·&nbsp; **[Self-hosting](#self-hosting)** &nbsp;·&nbsp; **[Try it locally](#try-it-on-your-computer)**
+
+</div>
+
+> [!NOTE]
+> Linksy uses it since 0.6 for "away from home". Linksy's own runs at `https://linksy-relay.diary.mg`; anyone can run their own copy and point their devices at it ([Self-hosting](#self-hosting)).
+
+---
 
 ## What it does
 
@@ -20,6 +42,8 @@ Files, screens, cameras and microphones always go **directly** between the devic
 trickle is enough for what's small (clipboard text, Ring, battery, links, notifications)
 and makes the relay useless for anything heavy. A device that can only reach the other
 through the relay says so instead of trying.
+
+---
 
 ## What it sees, and what it doesn't
 
@@ -35,6 +59,8 @@ they paired). The relay has no keys.
 It **logs warnings only** (`RUST_LOG=warn`): no per-connection lines, so no IP addresses
 on disk. It **stores nothing** but its TLS certificate. Metrics are totals only and
 listen on `127.0.0.1` of the host.
+
+---
 
 ## Deploy with Dokploy, behind a tunnel (`compose.yaml`)
 
@@ -54,12 +80,12 @@ and the certificate, and the relay speaks plain HTTP inside `dokploy-network`.
    WebSockets must be allowed (Cloudflare allows them by default).
 4. Check it: `curl -s -o /dev/null -w '%{http_code}\n' https://<your domain>/ping` → `200`.
 
-Tell me the domain when Linksy 0.6 needs it: it's a setting in the apps, not here.
+The domain is a setting in the apps, not here (see [Self-hosting](#self-hosting)).
 
 **What a tunnel can't carry:** the relay's address discovery (QUIC over UDP port 7842),
 which helps two devices on different networks find a direct path. Behind a tunnel the
 relay still introduces devices and passes the trickle; direct connections across
-networks may succeed less often. If Linksy 0.6's measurements say it matters, the fix is
+networks may succeed less often. If that matters for your users, the fix is
 to publish UDP 7842 on the server directly (outside the tunnel); `compose.public.yaml`
 shows how.
 
@@ -96,6 +122,8 @@ Upgrade: change `IROH_RELAY_VERSION` in the `Dockerfile` and the image tags in t
 compose files, then rebuild. Linksy apps and the relay must use compatible iroh
 versions; the apps' release notes say which.
 
+---
+
 ## Hardening
 
 The container runs as `nobody` on an empty image (no shell, no package manager, nothing
@@ -121,6 +149,8 @@ Sizing, with the trickle: traffic is introductions, address answers and small me
 so one 5 EUR VPS (20 TB/month) has room for far more users than it will have. Watch
 `relayserver_bytes_recv_total` and `relayserver_bytes_rx_ratelimited_total` (how much the
 trickle held back) in the metrics.
+
+---
 
 ## Self-hosting
 
@@ -168,6 +198,8 @@ Manager runs in Docker, `127.0.0.1` is its own container: see `compose.proxy.yam
 joining its network and forwarding to `linksy-relay` instead.
 
 As behind a tunnel, QUIC address discovery (UDP 7842) isn't carried; see above.
+
+---
 
 ## Try it on your computer
 
