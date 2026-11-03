@@ -1,4 +1,4 @@
-<img width="1800" height="900" alt="Linksy Relay: finds your devices away from home, never reads them. A phone and a computer connected directly, introduced by the relay." src="docs/banner.png" />
+<img width="1800" height="900" alt="Linksy Relay: finds your devices away from home, never reads them. The relay tells a phone and a computer who's where and how to reach them; then they connect directly, end to end." src="docs/banner.webp" />
 
 <div align="center">
 
